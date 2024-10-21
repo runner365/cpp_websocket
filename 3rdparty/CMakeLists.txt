@@ -43,15 +43,4 @@ ExternalProject_Add(openssl
     )
 endif()
 
-ExternalProject_Add(libsrtp
-    DEPENDS openssl
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/libsrtp.tar.gz
-    SOURCE_DIR  ${CMAKE_CURRENT_BINARY_DIR}/libsrtp
-    BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND
-        ./configure --prefix=${PREFIX_DIR} --libdir=${INSTALL_RPATH} --enable-openssl --with-openssl-dir=${INSTALL_RPATH}/..
-    BUILD_COMMAND make -j 4
-    INSTALL_COMMAND make install
-    )
-
 add_subdirectory(libuv)

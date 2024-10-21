@@ -25,3 +25,12 @@ Support various common functions of websocket client
 Here are the client demos:
 * [ws_client_demo](src/tools/ws_client_demo.cpp): A demo of libuv internal thread sending data.
 * [ws_client_demo](src/tools/ws_client_asnyc_demo.cpp): A demo of libuv external thread sending data.
+
+## How to compile (linux/macos)
+Compilation uses cmake, which requires cmake 3.7.1 or above
+```
+mkdir objs
+cd objs
+cmake ..
+make
+```

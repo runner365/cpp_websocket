@@ -25,3 +25,12 @@ websocket客户端和服务器是用c++11开发，基于libuv高性能异步网�
 这里有客户端的demo: 
 * [ws_client_demo](src/tools/ws_client_demo.cpp): libuv内部线程发送数据的demo。
 * [ws_client_demo](src/tools/ws_client_asnyc_demo.cpp): libuv外部线程发送数据的demo。
+
+## 如何编译(linux/macos)
+编译采用cmake，需要cmake 3.7.1以上
+```
+mkdir objs
+cd objs
+cmake ..
+make
+```
