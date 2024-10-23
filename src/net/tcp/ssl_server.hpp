@@ -96,12 +96,13 @@ public:
             tls_state_ = TLS_SERVER_DATA_RECV_STATE;
             return 0;
         }
-
+        
         int r0 = BIO_write(bio_in_, data, len);
         if (r0 <= 0) {
             LogErrorf(logger_, "BIO_write error:%d", r0);
             return -1;
         }
+        
         //while(true) {
             r0 = SSL_read(ssl_, plaintext_data_, plaintext_data_len_);
             int r1 = SSL_get_error(ssl_, r0);
@@ -112,7 +113,7 @@ public:
             if (r0 > 0) {
                 cb_->PlaintextDataRecv((char*)plaintext_data_, r0);
             } else {
-                LogDebugf(logger_, "SSL_read error, r0:%d, r1:%d, r2:%d, r3:%d",
+                LogErrorf(logger_, "SSL_read error, r0:%d, r1:%d, r2:%d, r3:%d",
                         r0, r1, r2, r3);
                 //break;
             }
@@ -231,7 +232,7 @@ private:
     
         if ((size = BIO_get_mem_data(bio_out_, &data)) > 0) {
             if ((r0 = BIO_reset(bio_in_)) != 1) {
-                LogInfof(logger_, "BIO_reset error:%d", r0);
+                LogErrorf(logger_, "BIO_reset error:%d", r0);
                 return -1;
             }
         }

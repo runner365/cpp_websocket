@@ -1,5 +1,7 @@
 #include "net/http/websocket/websocket_client.hpp"
 #include "net/http/websocket/websocket_pub.hpp"
+#include "timer.hpp"
+#include "timeex.hpp"
 #include <stdint.h>
 #include <string>
 #include <iostream>
@@ -79,6 +81,7 @@ protected:
     }
     virtual void OnReadText(int code, const std::string& text) override {
         if (code < 0) {
+            is_connected_ = false;
             LogErrorf(logger_, "websocket read text error:%d", code);
             return;
         }
@@ -91,6 +94,7 @@ protected:
     }
     virtual void OnReadData(int code, const uint8_t* data, size_t len) override {
         if (code < 0) {
+            is_connected_ = false;
             LogErrorf(logger_, "websocket read data error:%d", code);
             return;
         }

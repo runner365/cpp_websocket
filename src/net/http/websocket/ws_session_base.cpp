@@ -29,9 +29,6 @@ int WebSocketSessionBase::HandleFrame(DataBuffer& data) {
     int ret = 0;
     int i   = 0;
 
-    // int print_len = (data.DataLen() > 16) ? 16 : data.DataLen();
-    // LogInfof(logger_, "handle frame data len:%lu", data.DataLen());
-    // LogInfoData(logger_, (uint8_t*)data.Data(), print_len, "handle frame");
     do {
         if (i == 0) {
             ret = frame_->Parse((uint8_t*)data.Data(), data.DataLen());
@@ -48,7 +45,7 @@ int WebSocketSessionBase::HandleFrame(DataBuffer& data) {
         if (frame_->GetOperCode() == WS_OP_TEXT_TYPE || frame_->GetOperCode() == WS_OP_BIN_TYPE) {
             last_op_code_ = frame_->GetOperCode();
         }
-        LogDebugf(logger_, "frame is ready:%s", BOOL2STRING(frame_->PayloadIsReady()));
+        
         if (!frame_->PayloadIsReady()) {
             return 1;
         }
@@ -56,11 +53,9 @@ int WebSocketSessionBase::HandleFrame(DataBuffer& data) {
         buffer_ptr->AppendData((char*)frame_->GetPayloadData(), frame_->GetPayloadLen());
         recv_buffer_vec_.emplace_back(std::move(buffer_ptr));
 
-        LogDebugf(logger_, "frame start:%d, payload len:%ld", frame_->GetPayloadStart(), frame_->GetPayloadLen());
         frame_->Consume(frame_->GetPayloadStart() + frame_->GetPayloadLen());
         frame_->Reset();
-        LogDebugf(logger_, "frame buffer len:%lu, fin:%d, op code:%d",
-            frame_->GetBufferLen(), frame_->GetFin(), frame_->GetOperCode());
+
         if (!frame_->GetFin()) {
             continue;
         }
@@ -124,7 +119,7 @@ void WebSocketSessionBase::SendClose(uint16_t code, const char *reason) {
 void WebSocketSessionBase::SendPingFrame(int64_t now_ms) {
     int64_t now_sec = now_ms / 1000;
     uint8_t data[4];
-
+    
     ByteStream::Write4Bytes(data, (uint32_t)now_sec);
     SendWsFrame(data, sizeof(data), WS_OP_PING_TYPE);
 }
