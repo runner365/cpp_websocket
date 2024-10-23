@@ -1,5 +1,7 @@
 #include "net/http/websocket/websocket_client.hpp"
 #include "net/http/websocket/websocket_pub.hpp"
+#include "timer.hpp"
+#include "timeex.hpp"
 #include <stdint.h>
 #include <string>
 #include <iostream>
@@ -11,17 +13,25 @@ using namespace cpp_streamer;
 
 static Logger* s_logger = nullptr;
 
-class WsClientWrapper : public WebSocketConnectionCallBackI
+class WsClientWrapper : public WebSocketConnectionCallBackI, public TimerInterface
 {
 friend void WsAsyncCallback(uv_async_t *handle);
 
 public:
-    WsClientWrapper(uv_loop_t* loop, const std::string& hostname, uint16_t port, const std::string& subpath, bool ssl_enable, Logger* logger):logger_(logger)
+    WsClientWrapper(uv_loop_t* loop, 
+                    const std::string& hostname, 
+                    uint16_t port, 
+                    const std::string& subpath, 
+                    bool ssl_enable, 
+                    Logger* logger):TimerInterface(loop, 2*1000)
+                                , logger_(logger)
     {
         ws_client_ptr_.reset(new WebSocketClient(loop, hostname, port, subpath, ssl_enable, logger, this));
         text_ = "0123456789";
         data_.resize(text_.length());
         memcpy(&data_[0], text_.c_str(), text_.length());
+
+        StartTimer();
     }
     ~WsClientWrapper()
     {
@@ -43,10 +53,17 @@ public:
         ws_client_ptr_->AsyncWriteData(data, len);
     }
 protected:
+    virtual void OnTimer() override {
+        if (is_connected_) {
+            last_send_ms_ = now_millisec();
+            AsyncSendText(text_);
+        }
+    }
+protected:
     virtual void OnConnection() override {
         is_connected_ = true;
         LogInfof(logger_, "websocket is connected...");
-        AsyncSendText(text_);
+        
     }
     virtual void OnClose(int code, const std::string& desc) override {
         is_connected_ = false;
@@ -54,26 +71,26 @@ protected:
     }
     virtual void OnReadText(int code, const std::string& text) override {
         if (code < 0) {
+            is_connected_ = false;
             LogErrorf(logger_, "websocket read text error:%d", code);
             return;
         }
         if (strcmp(text.c_str(), text_.c_str()) == 0) {
-            LogInfof(logger_, "text check ok, count:%d", ++count_);
-            if (count_ < 1000) {
-                AsyncSendData(&data_[0], data_.size());
-            }
+            int64_t const_ms = now_millisec() - last_send_ms_;
+            LogInfof(logger_, "text check ok, count:%d, const ms:%ld", ++count_, const_ms);
         } else {
             LogErrorf(logger_, "text check error, text len:%lu, text:%s", text.length(), text.c_str());
         }
     }
     virtual void OnReadData(int code, const uint8_t* data, size_t len) override {
         if (code < 0) {
+            is_connected_ = false;
             LogErrorf(logger_, "websocket read data error:%d", code);
             return;
         }
         if (memcmp((void*)data, (void*)&data_[0], len) == 0) {
-            LogInfof(logger_, "data check ok");
-            AsyncSendText(text_);
+            int64_t const_ms = now_millisec() - last_send_ms_;
+            LogInfof(logger_, "data check ok, count:%d, const ms:%ld", ++count_, const_ms);
         }  else {
             LogErrorf(logger_, "data check error, data len:%lu", len);
         }
@@ -87,6 +104,7 @@ private:
     std::string text_;
     std::vector<uint8_t> data_;
     int count_ = 0;
+    int64_t last_send_ms_ = -1;
 };
 
 /*

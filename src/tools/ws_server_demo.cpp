@@ -30,17 +30,24 @@ int main(int argc, char** argv) {
     bool server_ip_ready = false;
     char port_sz[32];
     uint16_t server_port = 0;
+    char key_file[256];
+    bool key_ready = false;
+    char cert_file[256];
+    bool cert_ready = false;
 
-    while ((opt = getopt(argc, argv, "s:p:l:h")) != -1) {
+    while ((opt = getopt(argc, argv, "s:p:k:c:l:h")) != -1) {
         switch (opt) {
             case 's': strncpy(server_ip, optarg, sizeof(server_ip)); server_ip_ready = true; break;
             case 'p': strncpy(port_sz, optarg, sizeof(port_sz)); server_port = atoi(port_sz); break;
             case 'l': strncpy(log_file, optarg, sizeof(log_file)); log_file_ready = true; break;
-            case 'h':
+            case 'k': strncpy(key_file, optarg, sizeof(key_file)); key_ready = true; break;
+            case 'c': strncpy(cert_file, optarg, sizeof(cert_file)); cert_ready = true; break;
             default: 
             {
                 printf("Usage: %s [-s websocket host ip]\n\
     [-p websocket host port]\n\
+    [-k https key file]\n\
+    [-c https cert file]\n\
     [-l log file name]\n",
                     argv[0]); 
                 return -1;
@@ -55,6 +62,7 @@ int main(int argc, char** argv) {
         std::cout << "please input server port.\r\n";
         return -1;
     }
+
     s_logger = new Logger();
     if (log_file_ready) {
         s_logger->SetFilename(std::string(log_file));
@@ -62,8 +70,15 @@ int main(int argc, char** argv) {
     uv_loop_t* loop = uv_default_loop();
 
     try {
-        WebSocketServer server(server_port, loop, s_logger);
-        server.AddHandle("/echo", HandleNewWebSocketSession);
+        std::unique_ptr<WebSocketServer> server_ptr;
+
+        if (key_ready && cert_ready) {
+            server_ptr.reset(new WebSocketServer(server_port, loop, key_file, cert_file, s_logger));
+        } else {
+            server_ptr.reset(new WebSocketServer(server_port, loop, s_logger));
+        }
+        
+        server_ptr->AddHandle("/echo", HandleNewWebSocketSession);
         while (true) {
             uv_run(loop, UV_RUN_DEFAULT);
         }
@@ -96,7 +111,7 @@ public:
             return;
         }
         std::string data_str((const char*)data, len);
-        LogInfof(s_logger, "webrtc receive data:%s", data_str.c_str());
+        LogInfof(s_logger, "websocket receive data:%s", data_str.c_str());
         session_->AsyncWriteData(data, len);
     }
     virtual void OnReadText(int code, const std::string& text) override {
@@ -109,7 +124,7 @@ public:
             s_sessions_.erase(session_->GetRemoteAddress());
             return;
         }
-        LogInfof(s_logger, "webrtc receive text:%s", text.c_str());
+        LogInfof(s_logger, "websocket receive text:%s", text.c_str());
         session_->AsyncWriteText(text);
     }
 

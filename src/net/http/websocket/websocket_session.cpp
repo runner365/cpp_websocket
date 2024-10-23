@@ -51,7 +51,7 @@ void WebSocketSession::OnTimer() {
     }
     int64_t now_ms = now_millisec();
 
-    if (now_ms - last_send_ping_ms_ > 1000) {
+    if (now_ms - last_send_ping_ms_ > 5000) {
         last_send_ping_ms_ = now_ms;
         SendPingFrame(now_ms);
     }

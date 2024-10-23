@@ -9,6 +9,8 @@ WebSocketServer::WebSocketServer(uint16_t port, uv_loop_t* loop, Logger* logger)
                                                                             , logger_(logger)
 {
     server_ptr_.reset(new TcpServer(loop_, port_, this));
+    StartTimer();
+    LogInfof(logger_, "WebSocketServer construct, port:%d", port);
 }
 
 WebSocketServer::WebSocketServer(uint16_t port,
@@ -22,7 +24,9 @@ WebSocketServer::WebSocketServer(uint16_t port,
                                         , key_file_(key_file)
                                         , cert_file_(cert_file)
 {
+    server_ptr_.reset(new TcpServer(loop_, port_, this));
     StartTimer();
+    LogInfof(logger_, "WebSocketServer construct, port:%d, key file:%s, cert file:%s", port, key_file_.c_str(), cert_file_.c_str());
 }
 
 WebSocketServer::~WebSocketServer()
