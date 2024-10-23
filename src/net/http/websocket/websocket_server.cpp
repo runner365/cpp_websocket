@@ -49,7 +49,8 @@ void WebSocketServer::OnTimer() {
     auto iter = sessions_.begin();
 
     while (iter != sessions_.end()) {
-        if (now_ms - iter->second->GetLastPongMs() > 20 * 1000) {
+        if (now_ms - iter->second->GetLastPongMs() > 15 * 1000) {
+            LogInfof(logger_, "ping/pong is timeout, remove ws session:%s", iter->second->GetRemoteAddress().c_str());
             iter = sessions_.erase(iter);
         } else {
             iter++;

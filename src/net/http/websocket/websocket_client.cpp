@@ -12,7 +12,7 @@ namespace cpp_streamer
 #define Websocket_Response_Code 101
 #define Websocket_Key_Hash "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 #define kWebSocketPingInterval 1000
-#define kWebSocketPongTimeout (10*1000)
+#define kWebSocketPongTimeout (15*1000)
 
 WebSocketClient::WebSocketClient(uv_loop_t* loop, 
                                 const std::string& hostname, 
@@ -112,9 +112,15 @@ void WebSocketClient::SendWsFrame(const uint8_t* data, size_t len, uint8_t op_co
     for (size_t i = temp_len; i < len; ++i) {
         p[i] ^= masking_key[i % 4];
     }
-    client_ptr_->GetTcpClient()->Send((char*)header_start, header_len);
-    client_ptr_->GetTcpClient()->Send((char*)masking_key, sizeof(masking_key));
-    client_ptr_->GetTcpClient()->Send((char*)p, len);
+    size_t total = header_len + sizeof(masking_key) + len;
+    std::vector<uint8_t> data_buffer(total);
+    uint8_t* buffer_p = (uint8_t*)&data_buffer[0];
+
+    memcpy(buffer_p, header_start, header_len);
+    memcpy(buffer_p + header_len, masking_key, sizeof(masking_key));
+    memcpy(buffer_p + header_len + sizeof(masking_key), p, len);
+
+    client_ptr_->GetTcpClient()->Send((char*)buffer_p, total);
 }
 
 void WebSocketClient::OnTimer() {
@@ -123,7 +129,7 @@ void WebSocketClient::OnTimer() {
     }
     int64_t now_ms = now_millisec();
 
-    if (now_ms - last_send_ping_ms_ > 1000) {
+    if (now_ms - last_send_ping_ms_ > 2000) {
         last_send_ping_ms_ = now_ms;
         SendPingFrame(now_ms);
     }
@@ -208,7 +214,7 @@ void WebSocketClient::HandleHttpRespone(std::shared_ptr<HttpClientResponse> resp
     } catch(const std::exception& e) {
         std::stringstream excepion_ss;
         excepion_ss << "websocket http handshake exception:" <<  e.what();
-        LogInfof(logger_, "websocket http handshake exception:%s", e.what());
+        LogErrorf(logger_, "websocket http handshake exception:%s", e.what());
         is_connected_ = false;
         conn_cb_->OnClose(-1, excepion_ss.str());
     }

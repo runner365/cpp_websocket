@@ -210,7 +210,7 @@ public:
 
     int SslWrite(uint8_t* plain_text_data, size_t len) {
         int writen_len = 0;
-
+        
         for (char* p = (char*)plain_text_data; p < (char*)plain_text_data + len;) {
             int left = (int)len - (p - (char*)plain_text_data);
             int r0 = SSL_write(ssl_, (const void*)p, left);
